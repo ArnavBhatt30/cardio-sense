@@ -494,3 +494,57 @@ function CmpRow({ label, records, fmt, tint, large }: {
     </tr>
   );
 }
+
+function DeltaBadge({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full border border-border px-1.5 py-0.5 font-mono text-[9px] text-ink3">
+        <Minus className="h-2.5 w-2.5" /> 0
+      </span>
+    );
+  }
+  const up = delta > 0;
+  const c = up ? "primary" : "sage";
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 font-mono text-[9px]"
+      style={{
+        borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
+        background: `color-mix(in oklab, var(--${c}) 10%, transparent)`,
+        color: `var(--${c})`,
+      }}
+      title={`${up ? "Up" : "Down"} ${Math.abs(delta)} pts vs. previous scan`}
+    >
+      {up ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+      {up ? "+" : ""}{delta}
+    </span>
+  );
+}
+
+function ExpandedRow({ r, settings }: {
+  r: Record;
+  settings: { weightUnit: "kg" | "lb"; heightUnit: "cm" | "in" };
+}) {
+  const lvl = (n?: number) => n === 3 ? "Well above normal" : n === 2 ? "Above normal" : n === 1 ? "Normal" : "—";
+  const yn = (n?: number) => n === 1 ? "Yes" : n === 0 ? "No" : "—";
+  const items: [string, string][] = [
+    ["Sex", r.gender === 2 ? "Male" : r.gender === 1 ? "Female" : "—"],
+    ["Height", r.height ? formatHeight(Number(r.height), settings.heightUnit) : "—"],
+    ["Weight", r.weight ? formatWeight(Number(r.weight), settings.weightUnit) : "—"],
+    ["Cholesterol", lvl(r.cholesterol)],
+    ["Glucose", lvl(r.gluc)],
+    ["Smoker", yn(r.smoke)],
+    ["Alcohol", yn(r.alco)],
+    ["Active", yn(r.active)],
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-x-8 gap-y-2 md:grid-cols-4">
+      {items.map(([k, v]) => (
+        <div key={k} className="border-l-2 border-border pl-3">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-ink3">{k}</div>
+          <div className="mt-0.5 text-sm">{v}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
