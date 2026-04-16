@@ -129,91 +129,74 @@ html, body { transition: background-color 400ms ease, color 400ms ease; }
 
 /* ============== Custom Cursor ============== */
 .has-custom-cursor,
-.has-custom-cursor * {
-  cursor: none !important;
-}
+.has-custom-cursor * { cursor: none !important; }
 
-.custom-cursor-dot {
+.cs-cursor {
   position: fixed;
   top: 0; left: 0;
-  width: 5px; height: 5px;
+  width: 18px; height: 18px;
   border-radius: 999px;
-  background: var(--foreground);
+  background: #fff;
+  mix-blend-mode: difference;
   pointer-events: none;
   z-index: 999999;
   opacity: 0;
+  transform-origin: center;
   transition:
-    opacity 180ms ease,
-    width 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    height 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 220ms ease,
-    border-radius 220ms ease;
+    opacity 200ms ease,
+    width 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-radius 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 240ms ease;
   will-change: transform;
-}
-.custom-cursor-dot[data-mode="hover"] {
-  width: 0; height: 0;
-  opacity: 0 !important;
-}
-.custom-cursor-dot[data-mode="text"] {
-  width: 2px; height: 22px;
-  border-radius: 2px;
-  background: var(--primary);
-}
-.custom-cursor-dot[data-pressed="true"]:not([data-mode="text"]) {
-  width: 9px; height: 9px;
-  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.custom-cursor-ring {
-  position: fixed;
-  top: 0; left: 0;
-  width: 30px; height: 30px;
+.cs-cursor[data-mode="hover"] {
+  width: 46px; height: 46px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--foreground) 55%, transparent);
-  background: color-mix(in oklab, var(--foreground) 4%, transparent);
-  pointer-events: none;
-  z-index: 999998;
-  opacity: 0;
-  transition:
-    opacity 220ms ease,
-    width 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    height 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    border-color 220ms ease,
-    background-color 220ms ease,
-    border-radius 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
+  background: #fff;
 }
-.custom-cursor-ring[data-mode="idle"] { opacity: 0.7; }
-.custom-cursor-ring[data-mode="hover"] {
-  width: 44px; height: 44px;
-  opacity: 1;
-  border-color: var(--primary);
-  background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+.cs-cursor[data-mode="hover"]:has(.cs-cursor-label:not(:empty)) {
+  width: auto; height: auto;
+  min-width: 64px;
+  padding: 8px 14px;
+  border-radius: 999px;
 }
-.custom-cursor-ring[data-mode="text"] {
-  width: 0; height: 0;
-  opacity: 0;
-  border-color: transparent;
+
+.cs-cursor[data-mode="text"] {
+  width: 2px; height: 26px;
+  border-radius: 1px;
+  background: #fff;
 }
-.custom-cursor-ring[data-pressed="true"][data-mode="hover"] {
+
+.cs-cursor[data-pressed="true"][data-mode="idle"] {
+  width: 10px; height: 10px;
+}
+.cs-cursor[data-pressed="true"][data-mode="hover"] {
   width: 36px; height: 36px;
-  background-color: color-mix(in oklab, var(--primary) 22%, transparent);
 }
-.custom-cursor-ring[data-pressed="true"][data-mode="idle"] {
-  width: 22px; height: 22px;
-  opacity: 1;
-}
-.custom-cursor-ring[data-disabled="true"] {
-  border-color: color-mix(in oklab, var(--foreground) 25%, transparent) !important;
-  background-color: transparent !important;
+
+.cs-cursor-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #000;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 @media (pointer: coarse), (hover: none) {
   .has-custom-cursor, .has-custom-cursor * { cursor: auto !important; }
-  .custom-cursor-dot, .custom-cursor-ring { display: none !important; }
+  .cs-cursor { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .custom-cursor-ring { transition: opacity 150ms ease; }
+  .cs-cursor { transition: opacity 150ms ease; }
 }
 
 @keyframes shimmer { 100% { transform: translateX(100%); } }

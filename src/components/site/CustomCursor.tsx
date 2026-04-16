@@ -1,109 +1,120 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Refined minimal cursor:
- * - Dot follows pointer 1:1 (no lag).
- * - Ring follows with smooth spring lerp.
- * - Morphs into a vertical I-beam over text inputs.
- * - Expands into a soft pill over interactive elements.
- * - Fully hidden on touch devices and when reduced-motion users prefer system cursor.
+ * Premium minimal cursor.
+ * - Single blob that follows the pointer with velocity-based stretch.
+ * - Uses mix-blend-mode: difference so it's always visible on any background.
+ * - Morphs into a thin I-beam over text inputs.
+ * - Expands into a soft pill (with optional label via data-cursor-label) over interactive elements.
+ * - Hidden on touch devices.
  */
 export function CustomCursor() {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
+  const blobRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const fine = window.matchMedia("(pointer: fine)").matches;
-    if (!fine) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
     setEnabled(true);
 
-    let mouseX = -100;
-    let mouseY = -100;
-    let ringX = mouseX;
-    let ringY = mouseY;
+    let mx = -200, my = -200;
+    let x = mx, y = my;
+    let lastX = mx, lastY = my;
     let raf = 0;
     let visible = false;
+    let mode: "idle" | "hover" | "text" = "idle";
+    let pressed = false;
+
+    const blob = blobRef.current!;
+    const label = labelRef.current!;
 
     const setVisible = (v: boolean) => {
       if (visible === v) return;
       visible = v;
-      const op = v ? "1" : "0";
-      if (dotRef.current) dotRef.current.style.opacity = op;
-      if (ringRef.current) ringRef.current.style.opacity = v ? "" : "0";
+      blob.style.opacity = v ? "1" : "0";
+    };
+
+    const apply = () => {
+      blob.dataset.mode = mode;
+      blob.dataset.pressed = pressed ? "true" : "false";
     };
 
     const updateMode = (t: EventTarget | null) => {
       const el = t as HTMLElement | null;
-      const ring = ringRef.current;
-      const dot = dotRef.current;
-      if (!ring || !dot) return;
+      const text = el?.closest(
+        'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]):not([type="color"]), textarea, [contenteditable="true"]',
+      );
+      const interactive = el?.closest(
+        'a, button, [role="button"], select, summary, label[for], [data-cursor="hover"]',
+      );
+      const labelText =
+        (interactive as HTMLElement | null)?.dataset?.cursorLabel ?? "";
 
-      const isText =
-        !!el?.closest('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]), textarea, [contenteditable="true"]');
-      const isInteractive =
-        !!el?.closest('a, button, [role="button"], select, summary, label, [data-cursor="hover"]');
-      const isDisabled = !!el?.closest('[disabled], [aria-disabled="true"]');
-
-      ring.dataset.mode = isText ? "text" : isInteractive ? "hover" : "idle";
-      dot.dataset.mode = isText ? "text" : isInteractive ? "hover" : "idle";
-      ring.dataset.disabled = isDisabled ? "true" : "false";
+      const next: typeof mode = text ? "text" : interactive ? "hover" : "idle";
+      if (next !== mode) {
+        mode = next;
+        apply();
+      }
+      label.textContent = labelText;
+      label.style.opacity = labelText ? "1" : "0";
     };
 
-    const move = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+    const onMove = (e: MouseEvent) => {
+      mx = e.clientX;
+      my = e.clientY;
       setVisible(true);
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%)`;
-      }
       updateMode(e.target);
     };
-
-    const down = () => {
-      ringRef.current?.setAttribute("data-pressed", "true");
-      dotRef.current?.setAttribute("data-pressed", "true");
-    };
-    const up = () => {
-      ringRef.current?.setAttribute("data-pressed", "false");
-      dotRef.current?.setAttribute("data-pressed", "false");
-    };
-    const leave = (e: MouseEvent) => {
-      // only hide when leaving the window itself
-      if (!e.relatedTarget && !(e as any).toElement) setVisible(false);
-    };
-    const enter = () => setVisible(true);
-    const blur = () => setVisible(false);
+    const onDown = () => { pressed = true; apply(); };
+    const onUp = () => { pressed = false; apply(); };
+    const onOut = (e: MouseEvent) => { if (!e.relatedTarget) setVisible(false); };
+    const onOver = () => setVisible(true);
+    const onBlur = () => setVisible(false);
 
     const tick = () => {
-      const dx = mouseX - ringX;
-      const dy = mouseY - ringY;
-      ringX += dx * 0.22;
-      ringY += dy * 0.22;
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%)`;
+      // smooth follow
+      x += (mx - x) * 0.28;
+      y += (my - y) * 0.28;
+
+      // velocity → stretch + rotate (only in idle mode)
+      const vx = x - lastX;
+      const vy = y - lastY;
+      lastX = x; lastY = y;
+
+      let scaleX = 1, scaleY = 1, rotate = 0;
+      if (mode === "idle" && !pressed) {
+        const speed = Math.min(Math.hypot(vx, vy), 60);
+        const stretch = speed / 60; // 0..1
+        scaleX = 1 + stretch * 0.6;
+        scaleY = 1 - stretch * 0.35;
+        rotate = (Math.atan2(vy, vx) * 180) / Math.PI;
       }
+
+      blob.style.transform =
+        `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) ` +
+        `rotate(${rotate}deg) scale(${scaleX}, ${scaleY})`;
+
       raf = requestAnimationFrame(tick);
     };
 
     document.documentElement.classList.add("has-custom-cursor");
-    window.addEventListener("mousemove", move, { passive: true });
-    window.addEventListener("mousedown", down);
-    window.addEventListener("mouseup", up);
-    window.addEventListener("mouseout", leave);
-    window.addEventListener("mouseover", enter);
-    window.addEventListener("blur", blur);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("mouseout", onOut);
+    window.addEventListener("mouseover", onOver);
+    window.addEventListener("blur", onBlur);
     raf = requestAnimationFrame(tick);
 
     return () => {
       document.documentElement.classList.remove("has-custom-cursor");
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("mouseup", up);
-      window.removeEventListener("mouseout", leave);
-      window.removeEventListener("mouseover", enter);
-      window.removeEventListener("blur", blur);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("mouseout", onOut);
+      window.removeEventListener("mouseover", onOver);
+      window.removeEventListener("blur", onBlur);
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -111,9 +122,8 @@ export function CustomCursor() {
   if (!enabled) return null;
 
   return (
-    <>
-      <div ref={ringRef} aria-hidden className="custom-cursor-ring" data-mode="idle" data-pressed="false" />
-      <div ref={dotRef} aria-hidden className="custom-cursor-dot" data-mode="idle" data-pressed="false" />
-    </>
+    <div ref={blobRef} aria-hidden className="cs-cursor" data-mode="idle" data-pressed="false">
+      <span ref={labelRef} className="cs-cursor-label" />
+    </div>
   );
 }
