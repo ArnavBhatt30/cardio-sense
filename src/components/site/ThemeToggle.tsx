@@ -49,8 +49,8 @@ export function ThemeToggle() {
             : [`circle(${endRadius}px at ${x}px ${y}px)`, `circle(0px at ${x}px ${y}px)`],
         },
         {
-          duration: 700,
-          easing: "cubic-bezier(0.83, 0, 0.17, 1)",
+          duration: 480,
+          easing: "cubic-bezier(0.65, 0, 0.35, 1)",
           pseudoElement: isDark ? "::view-transition-new(root)" : "::view-transition-old(root)",
         },
       );
@@ -82,24 +82,18 @@ export function ThemeToggle() {
       <span className="theme-burst pointer-events-none absolute inset-0 rounded-full" />
 
       <Sun
-        className="absolute h-[18px] w-[18px] transition-all duration-700"
+        className="absolute h-[18px] w-[18px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
         style={{
           opacity: isDark ? 0 : 1,
-          transform: isDark
-            ? "rotate(-180deg) scale(0.3) translateY(8px)"
-            : "rotate(0) scale(1) translateY(0)",
-          filter: isDark ? "blur(4px)" : "blur(0)",
+          transform: isDark ? "rotate(-90deg) scale(0.3)" : "rotate(0) scale(1)",
         }}
         strokeWidth={1.75}
       />
       <Moon
-        className="absolute h-[18px] w-[18px] transition-all duration-700"
+        className="absolute h-[18px] w-[18px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
         style={{
           opacity: isDark ? 1 : 0,
-          transform: isDark
-            ? "rotate(0) scale(1) translateY(0)"
-            : "rotate(180deg) scale(0.3) translateY(-8px)",
-          filter: isDark ? "blur(0)" : "blur(4px)",
+          transform: isDark ? "rotate(0) scale(1)" : "rotate(90deg) scale(0.3)",
         }}
         strokeWidth={1.75}
       />
