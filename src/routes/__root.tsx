@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { PageTransition } from "@/components/site/PageTransition";
 import { CommandPalette } from "@/components/site/CommandPalette";
 import { OnboardingTour } from "@/components/site/OnboardingTour";
+import { CustomCursor } from "@/components/site/CustomCursor";
 import { SettingsProvider } from "@/lib/settings";
 
 import appCss from "../styles.css?url";
@@ -93,6 +94,7 @@ function RootComponent() {
       <SiteFooter />
       <CommandPalette />
       <OnboardingTour />
+      <CustomCursor />
       <Toaster />
     </SettingsProvider>
   );
