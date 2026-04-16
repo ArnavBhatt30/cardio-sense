@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash2, FileDown, ArrowUpDown, GitCompare, X } from "lucide-react";
+import { Trash2, FileDown, ArrowUpDown, GitCompare, X, ChevronDown, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import JSZip from "jszip";
 import { buildReport, downloadPdf, type ReportRecord } from "@/lib/pdf-report";
 import { SkeletonRow } from "@/components/ui/skeleton-row";
 import { EcgEmpty } from "@/components/site/EcgEmpty";
+import { useSettings, formatHeight, formatWeight } from "@/lib/settings";
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
