@@ -49,8 +49,8 @@ export function ThemeToggle() {
             : [`circle(${endRadius}px at ${x}px ${y}px)`, `circle(0px at ${x}px ${y}px)`],
         },
         {
-          duration: 700,
-          easing: "cubic-bezier(0.83, 0, 0.17, 1)",
+          duration: 480,
+          easing: "cubic-bezier(0.65, 0, 0.35, 1)",
           pseudoElement: isDark ? "::view-transition-new(root)" : "::view-transition-old(root)",
         },
       );
