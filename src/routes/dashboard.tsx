@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
+import { Sparkline } from "@/components/dashboard/Sparkline";
+import { SkeletonBlock } from "@/components/ui/skeleton-row";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
@@ -78,7 +80,11 @@ function DashboardPage() {
       </div>
 
       {rows === null ? (
-        <p className="text-ink2">Loading…</p>
+        <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-card p-7"><SkeletonBlock className="h-10 w-24" /><SkeletonBlock className="mt-3 h-3 w-32" /></div>
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <EmptyState />
       ) : (
@@ -91,6 +97,19 @@ function DashboardPage() {
             } />
             <Metric n={stats!.avgBmi.toFixed(1)} label="Average BMI" />
             <Metric n={`${stats!.high}`} label="High-risk patients" tint={stats!.high > 0 ? "primary" : undefined} />
+          </section>
+
+          {/* trend sparkline */}
+          <section className="surface-raised mb-12 grid gap-6 px-8 py-6 md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <div className="eyebrow mb-2">Risk trend · last {Math.min(rows.length, 10)} scans</div>
+              <div className="text-sm text-ink2">
+                {rows.length >= 2
+                  ? `Trending ${rows[0].risk_score > rows[Math.min(rows.length, 10) - 1].risk_score ? "upward" : "downward"} from oldest to most recent`
+                  : "Run more diagnoses to surface a trend."}
+              </div>
+            </div>
+            <Sparkline values={[...rows.slice(0, 10)].reverse().map((r) => r.risk_score)} width={260} height={56} />
           </section>
 
           {/* distribution + recent */}
