@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { calcBmi } from "@/lib/risk-utils";
+import { toast } from "sonner";
+
+const DRAFT_KEY = "cardiosense:diagnose-draft";
 
 export type FormState = {
   patient_name: string;
