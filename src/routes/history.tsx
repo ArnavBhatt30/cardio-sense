@@ -154,6 +154,45 @@ function HistoryPage() {
     else setSelected(new Set(filtered.map((r) => r.id)));
   };
 
+  // Per-patient previous-scan map for delta badges (uses unfiltered chronological history)
+  const deltaMap = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!rows) return m;
+    const byPatient = new Map<string, Record[]>();
+    rows.forEach((r) => {
+      const key = r.patient_name.toLowerCase().trim();
+      const arr = byPatient.get(key) ?? [];
+      arr.push(r);
+      byPatient.set(key, arr);
+    });
+    byPatient.forEach((arr) => {
+      const sorted = [...arr].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      sorted.forEach((r, i) => {
+        if (i > 0) m.set(r.id, r.risk_score - sorted[i - 1].risk_score);
+      });
+    });
+    return m;
+  }, [rows]);
+
+  // Keyboard navigation on rows
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (filtered.length === 0) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((i) => Math.min(filtered.length - 1, i + 1 < 0 ? 0 : i + 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((i) => Math.max(0, i - 1)); }
+      else if (e.key === " " && focusedIdx >= 0) { e.preventDefault(); toggleSel(filtered[focusedIdx].id); }
+      else if (e.key === "Enter" && focusedIdx >= 0) {
+        e.preventDefault();
+        const id = filtered[focusedIdx].id;
+        setExpanded((x) => x === id ? null : id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filtered, focusedIdx]);
+
   if (!authed) return null;
   const compareList = (rows ?? []).filter((r) => selected.has(r.id));
 
@@ -285,60 +324,85 @@ function HistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => {
+                {filtered.map((r, idx) => {
                   const c = r.risk_tier === "high" ? "primary" : r.risk_tier === "mid" ? "amber" : "sage";
                   const tierLabel = r.risk_tier === "high" ? "High" : r.risk_tier === "mid" ? "Mod" : "Low";
                   const isSel = selected.has(r.id);
+                  const isExp = expanded === r.id;
+                  const isFocused = focusedIdx === idx;
+                  const delta = deltaMap.get(r.id);
                   return (
-                    <tr key={r.id}
-                      className="border-t border-border transition-colors hover:bg-bone2/30"
-                      style={isSel ? { background: "color-mix(in oklab, var(--primary) 5%, transparent)" } : undefined}
-                    >
-                      <td className="px-4 py-4">
-                        <input type="checkbox" checked={isSel} onChange={() => toggleSel(r.id)}
-                          aria-label={`Select ${r.patient_name}`}
-                          className="h-3.5 w-3.5 cursor-pointer accent-primary" />
-                      </td>
-                      <td className="px-5 py-4 font-medium">{r.patient_name}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{r.age}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{Number(r.bmi).toFixed(1)}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{r.ap_hi}/{r.ap_lo}</td>
-                      <td className="px-5 py-4">
-                        <span className="display-numeral text-2xl" style={{ color: `var(--${c})` }}>
-                          {r.risk_score}<span className="ml-0.5 text-[10px] align-top">%</span>
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest"
-                          style={{
-                            borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
-                            background: `color-mix(in oklab, var(--${c}) 8%, transparent)`,
-                            color: `var(--${c})`,
-                          }}>
-                          {tierLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[10px] text-ink3">
-                        {new Date(r.created_at).toLocaleString("en-GB", {
-                          day: "2-digit", month: "short", year: "2-digit",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => downloadPdf(r)}
-                            className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
-                            aria-label="Download PDF" title="Download PDF report">
-                            <FileDown className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => onDelete(r.id)}
-                            className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
-                            aria-label="Delete record">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={r.id}
+                        onClick={() => setExpanded(isExp ? null : r.id)}
+                        onMouseEnter={() => setFocusedIdx(idx)}
+                        className="cursor-pointer border-t border-border transition-colors hover:bg-bone2/30"
+                        style={{
+                          ...(isSel ? { background: "color-mix(in oklab, var(--primary) 5%, transparent)" } : {}),
+                          ...(isFocused ? { boxShadow: "inset 2px 0 0 var(--primary)" } : {}),
+                        }}
+                      >
+                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={isSel} onChange={() => toggleSel(r.id)}
+                            aria-label={`Select ${r.patient_name}`}
+                            className="h-3.5 w-3.5 cursor-pointer accent-primary" />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 font-medium">
+                            <ChevronDown className={`h-3 w-3 text-ink3 transition-transform ${isExp ? "rotate-0" : "-rotate-90"}`} />
+                            {r.patient_name}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{r.age}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{Number(r.bmi).toFixed(1)}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{r.ap_hi}/{r.ap_lo}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-baseline gap-2">
+                            <span className="display-numeral text-2xl" style={{ color: `var(--${c})` }}>
+                              {r.risk_score}<span className="ml-0.5 text-[10px] align-top">%</span>
+                            </span>
+                            {delta !== undefined && <DeltaBadge delta={delta} />}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest"
+                            style={{
+                              borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
+                              background: `color-mix(in oklab, var(--${c}) 8%, transparent)`,
+                              color: `var(--${c})`,
+                            }}>
+                            {tierLabel}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[10px] text-ink3">
+                          {new Date(r.created_at).toLocaleString("en-GB", {
+                            day: "2-digit", month: "short", year: "2-digit",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => downloadPdf(r)}
+                              className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
+                              aria-label="Download PDF" title="Download PDF report">
+                              <FileDown className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => onDelete(r.id)}
+                              className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
+                              aria-label="Delete record">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExp && (
+                        <tr key={`${r.id}-exp`} className="border-t border-border bg-bone2/20">
+                          <td colSpan={9} className="px-8 py-6 animate-[fade-in_0.2s_ease-out]">
+                            <ExpandedRow r={r} settings={settings} />
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
                 {filtered.length === 0 && (
