@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DiagnoseRouteImport } from './routes/diagnose'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const DiagnoseRoute = DiagnoseRouteImport.update({
   id: '/diagnose',
   path: '/diagnose',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/diagnose': typeof DiagnoseRoute
   '/history': typeof HistoryRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/diagnose': typeof DiagnoseRoute
   '/history': typeof HistoryRoute
 }
@@ -60,21 +68,30 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
+  '/dashboard': typeof DashboardRoute
   '/diagnose': typeof DiagnoseRoute
   '/history': typeof HistoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/auth' | '/diagnose' | '/history'
+  fullPaths: '/' | '/about' | '/auth' | '/dashboard' | '/diagnose' | '/history'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/auth' | '/diagnose' | '/history'
-  id: '__root__' | '/' | '/about' | '/auth' | '/diagnose' | '/history'
+  to: '/' | '/about' | '/auth' | '/dashboard' | '/diagnose' | '/history'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/dashboard'
+    | '/diagnose'
+    | '/history'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
+  DashboardRoute: typeof DashboardRoute
   DiagnoseRoute: typeof DiagnoseRoute
   HistoryRoute: typeof HistoryRoute
 }
@@ -93,6 +110,13 @@ declare module '@tanstack/react-router' {
       path: '/diagnose'
       fullPath: '/diagnose'
       preLoaderRoute: typeof DiagnoseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -123,6 +147,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
+  DashboardRoute: DashboardRoute,
   DiagnoseRoute: DiagnoseRoute,
   HistoryRoute: HistoryRoute,
 }
