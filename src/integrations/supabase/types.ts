@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      patient_records: {
+        Row: {
+          active: number
+          age: number
+          alco: number
+          ap_hi: number
+          ap_lo: number
+          bmi: number
+          cholesterol: number
+          confidence: number | null
+          created_at: string
+          gender: number
+          gluc: number
+          height: number
+          id: string
+          patient_name: string
+          risk_score: number
+          risk_tier: string
+          smoke: number
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          active: number
+          age: number
+          alco: number
+          ap_hi: number
+          ap_lo: number
+          bmi: number
+          cholesterol: number
+          confidence?: number | null
+          created_at?: string
+          gender: number
+          gluc: number
+          height: number
+          id?: string
+          patient_name: string
+          risk_score: number
+          risk_tier: string
+          smoke: number
+          user_id: string
+          weight: number
+        }
+        Update: {
+          active?: number
+          age?: number
+          alco?: number
+          ap_hi?: number
+          ap_lo?: number
+          bmi?: number
+          cholesterol?: number
+          confidence?: number | null
+          created_at?: string
+          gender?: number
+          gluc?: number
+          height?: number
+          id?: string
+          patient_name?: string
+          risk_score?: number
+          risk_tier?: string
+          smoke?: number
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
