@@ -5,10 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 6px);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -31,69 +31,125 @@
   --color-ring: var(--primary);
   --color-ring-offset-background: var(--background);
 
-  --color-cream: var(--cream);
-  --color-cream2: var(--cream2);
+  --color-bone: var(--bone);
+  --color-bone2: var(--bone2);
   --color-ink: var(--foreground);
   --color-ink2: var(--ink2);
   --color-ink3: var(--ink3);
+  --color-ink4: var(--ink4);
   --color-amber: var(--amber);
-  --color-green: var(--green);
+  --color-sage: var(--sage);
+  --color-oxblood: var(--primary);
 
-  --font-serif: "Instrument Serif", serif;
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-mono: "DM Mono", ui-monospace, monospace;
+  --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Inter Tight", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --shadow-editorial: 0 1px 2px oklch(0.18 0.02 40 / 0.04), 0 24px 48px -28px oklch(0.18 0.02 40 / 0.18);
+  --gradient-vital: linear-gradient(90deg, var(--sage), var(--amber) 55%, var(--primary));
 }
 
 :root {
-  --radius: 0.875rem;
+  --radius: 1rem;
 
-  /* Editorial cream palette inspired by uploaded design */
-  --cream:    oklch(0.965 0.012 80);
-  --cream2:   oklch(0.935 0.018 75);
-  --background: var(--cream);
-  --foreground: oklch(0.18 0.02 40);
-  --ink2:       oklch(0.42 0.02 40);
-  --ink3:       oklch(0.62 0.015 50);
+  /* Editorial medical-luxury palette */
+  --bone:        oklch(0.972 0.008 75);    /* canvas */
+  --bone2:       oklch(0.945 0.014 72);    /* secondary surface */
+  --background:  var(--bone);
+  --foreground:  oklch(0.18 0.018 45);
+  --ink2:        oklch(0.40 0.018 45);
+  --ink3:        oklch(0.58 0.014 50);
+  --ink4:        oklch(0.78 0.010 60);
 
-  --card:       oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 40);
-  --muted:      oklch(0.93 0.012 75);
-  --muted-foreground: oklch(0.45 0.02 50);
-  --secondary:  oklch(0.93 0.012 75);
-  --accent:     oklch(0.55 0.18 25);
+  --card:               oklch(1 0 0);
+  --card-foreground:    oklch(0.18 0.018 45);
+  --muted:              oklch(0.93 0.012 72);
+  --muted-foreground:   oklch(0.45 0.018 50);
+  --secondary:          oklch(0.94 0.014 72);
+  --accent:             oklch(0.45 0.16 25);
 
-  /* Clinical accents */
-  --primary:    oklch(0.52 0.19 25);   /* deep red */
-  --primary-foreground: oklch(0.98 0.005 80);
-  --amber:      oklch(0.66 0.16 60);
-  --green:      oklch(0.52 0.11 155);
-  --destructive: oklch(0.52 0.19 25);
+  /* Clinical tokens */
+  --primary:             oklch(0.45 0.16 25);    /* oxblood */
+  --primary-foreground:  oklch(0.985 0.005 80);
+  --amber:               oklch(0.72 0.14 65);
+  --sage:                oklch(0.62 0.08 155);
+  --destructive:         oklch(0.50 0.20 25);
 
-  --border:     oklch(0.18 0.02 40 / 0.12);
+  --border: oklch(0.18 0.018 45 / 0.10);
 }
 
 @layer base {
   * { border-color: var(--color-border); }
-  html, body { background-color: var(--color-background); color: var(--color-foreground); }
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
   body {
     font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3 { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
-  h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.05; }
-  h2 { font-size: clamp(1.8rem, 3.5vw, 2.75rem); line-height: 1.1; }
-  h1 em, h2 em { font-style: italic; color: var(--primary); }
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 380;
+    letter-spacing: -0.02em;
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+  }
+  h1 { font-size: clamp(2.75rem, 7vw, 5.5rem); line-height: 0.98; }
+  h2 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.05; }
+  h3 { font-size: clamp(1.35rem, 2vw, 1.75rem); line-height: 1.15; }
+  h1 em, h2 em, h3 em { font-style: italic; color: var(--primary); font-variation-settings: "opsz" 144, "SOFT" 100; }
+
+  .display-numeral {
+    font-family: var(--font-serif);
+    font-variation-settings: "opsz" 144, "SOFT" 0;
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    line-height: 0.85;
+  }
+
   .eyebrow {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--ink3);
   }
+  .eyebrow-dot::before {
+    content: "";
+    display: inline-block;
+    width: 0.4rem; height: 0.4rem;
+    border-radius: 999px;
+    background: var(--primary);
+    margin-right: 0.55rem;
+    transform: translateY(-1px);
+  }
+
   .surface {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
   }
+  .surface-raised {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-editorial);
+  }
+  .hairline { border-top: 1px solid var(--border); }
+
+  /* Subtle paper texture for canvas */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(oklch(0.18 0.02 45 / 0.025) 1px, transparent 1px);
+    background-size: 4px 4px;
+    mask-image: linear-gradient(to bottom, black, black);
+  }
+  main { position: relative; z-index: 1; }
 }
