@@ -105,28 +105,43 @@
 
 .theme-toggle-icon { transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 220ms ease; }
 
-/* ============== View Transitions: circular reveal for theme switch ============== */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-::view-transition-old(root) { z-index: 1; }
-::view-transition-new(root) { z-index: 9999; }
-.dark::view-transition-old(root) { z-index: 9999; }
-.dark::view-transition-new(root) { z-index: 1; }
-
-/* Disable global color transitions during the view transition so the clip-path reveal isn't muddied */
-html:active-view-transition,
-html:active-view-transition * { transition: none !important; }
-
-/* Theme toggle burst ring */
+/* ============== Theme toggle motion ============== */
 .theme-toggle-btn:active .theme-burst {
-  animation: burst 500ms ease-out;
+  animation: burst 420ms ease-out;
 }
+
+.theme-pulse {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(0.12);
+  opacity: 0;
+  will-change: transform, opacity;
+  background: radial-gradient(circle, color-mix(in oklab, var(--primary) 38%, var(--background)) 0%, var(--background) 45%, transparent 72%);
+}
+
+.theme-pulse[data-theme="dark"] {
+  background: radial-gradient(circle, color-mix(in oklab, var(--primary) 32%, var(--background)) 0%, var(--background) 48%, transparent 72%);
+}
+
+.theme-pulse[data-theme="light"] {
+  background: radial-gradient(circle, color-mix(in oklab, var(--amber) 44%, var(--background)) 0%, var(--background) 48%, transparent 72%);
+}
+
+.theme-pulse.is-active {
+  animation: theme-pulse 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes theme-pulse {
+  0% { transform: translate(-50%, -50%) scale(0.12); opacity: 0; }
+  20% { opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
 @keyframes burst {
   0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 50%, transparent); opacity: 1; }
-  100% { box-shadow: 0 0 0 22px color-mix(in oklab, var(--primary) 0%, transparent); opacity: 0; }
+  100% { box-shadow: 0 0 0 18px color-mix(in oklab, var(--primary) 0%, transparent); opacity: 0; }
 }
 
 /* ============== Custom Cursor ============== */
