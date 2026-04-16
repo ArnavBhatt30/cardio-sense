@@ -2,6 +2,8 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
+import { PageTransition } from "@/components/site/PageTransition";
+import { CommandPalette } from "@/components/site/CommandPalette";
 
 import appCss from "../styles.css?url";
 
@@ -82,9 +84,12 @@ function RootComponent() {
     <>
       <SiteHeader />
       <main className="min-h-[calc(100vh-4rem)]">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <SiteFooter />
+      <CommandPalette />
       <Toaster />
     </>
   );
