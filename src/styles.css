@@ -132,51 +132,88 @@ html, body { transition: background-color 400ms ease, color 400ms ease; }
 .has-custom-cursor * {
   cursor: none !important;
 }
+
 .custom-cursor-dot {
   position: fixed;
   top: 0; left: 0;
-  width: 6px; height: 6px;
+  width: 5px; height: 5px;
   border-radius: 999px;
-  background: var(--primary);
+  background: var(--foreground);
   pointer-events: none;
   z-index: 999999;
-  mix-blend-mode: normal;
-  transition: opacity 200ms ease, width 180ms ease, height 180ms ease, background 200ms ease;
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    width 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 220ms ease,
+    border-radius 220ms ease;
   will-change: transform;
 }
-.custom-cursor-dot[data-pressed="true"] {
-  width: 10px; height: 10px;
+.custom-cursor-dot[data-mode="hover"] {
+  width: 0; height: 0;
+  opacity: 0 !important;
 }
+.custom-cursor-dot[data-mode="text"] {
+  width: 2px; height: 22px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+.custom-cursor-dot[data-pressed="true"]:not([data-mode="text"]) {
+  width: 9px; height: 9px;
+  background: var(--primary);
+}
+
 .custom-cursor-ring {
   position: fixed;
   top: 0; left: 0;
-  width: 32px; height: 32px;
+  width: 30px; height: 30px;
   border-radius: 999px;
-  border: 1.25px solid var(--foreground);
-  opacity: 0.55;
+  border: 1px solid color-mix(in oklab, var(--foreground) 55%, transparent);
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
   pointer-events: none;
   z-index: 999998;
-  transition: width 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-              height 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-              border-color 250ms ease,
-              background-color 250ms ease,
-              opacity 250ms ease;
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    width 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 220ms ease,
+    background-color 220ms ease,
+    border-radius 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
-  backdrop-filter: invert(8%);
 }
-.custom-cursor-ring[data-hovering="true"] {
-  width: 52px; height: 52px;
+.custom-cursor-ring[data-mode="idle"] { opacity: 0.7; }
+.custom-cursor-ring[data-mode="hover"] {
+  width: 44px; height: 44px;
+  opacity: 1;
   border-color: var(--primary);
-  background-color: color-mix(in oklab, var(--primary) 10%, transparent);
-  opacity: 0.9;
+  background-color: color-mix(in oklab, var(--primary) 12%, transparent);
 }
-.custom-cursor-ring[data-pressed="true"] {
-  width: 24px; height: 24px;
+.custom-cursor-ring[data-mode="text"] {
+  width: 0; height: 0;
+  opacity: 0;
+  border-color: transparent;
+}
+.custom-cursor-ring[data-pressed="true"][data-mode="hover"] {
+  width: 36px; height: 36px;
+  background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+.custom-cursor-ring[data-pressed="true"][data-mode="idle"] {
+  width: 22px; height: 22px;
   opacity: 1;
 }
+.custom-cursor-ring[data-disabled="true"] {
+  border-color: color-mix(in oklab, var(--foreground) 25%, transparent) !important;
+  background-color: transparent !important;
+}
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (hover: none) {
+  .has-custom-cursor, .has-custom-cursor * { cursor: auto !important; }
   .custom-cursor-dot, .custom-cursor-ring { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .custom-cursor-ring { transition: opacity 150ms ease; }
 }
 
 @keyframes shimmer { 100% { transform: translateX(100%); } }
