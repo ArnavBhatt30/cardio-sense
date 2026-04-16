@@ -30,10 +30,43 @@ export function DiagnoseForm({
   loading: boolean;
 }) {
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as FormState;
+        if (Object.values(parsed).some((v) => v)) {
+          setForm({ ...emptyForm, ...parsed });
+          setRestored(true);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (Object.values(form).every((v) => !v)) {
+      localStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    const id = setTimeout(() => {
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch { /* ignore */ }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [form]);
+
   const set = <K extends keyof FormState>(k: K, v: string) => setForm((s) => ({ ...s, [k]: v }));
   const liveBmi = form.height && form.weight
     ? calcBmi(parseFloat(form.weight), parseFloat(form.height))
     : null;
+
+  const clearDraft = () => {
+    setForm(emptyForm);
+    localStorage.removeItem(DRAFT_KEY);
+    setRestored(false);
+    toast.success("Draft cleared");
+  };
 
   return (
     <form
