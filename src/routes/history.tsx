@@ -26,16 +26,22 @@ type SortKey = "created_at" | "risk_score" | "patient_name" | "bmi";
 
 function HistoryPage() {
   const navigate = useNavigate();
+  const settings = useSettings();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Record[] | null>(null);
   const [query, setQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortKey, setSortKey] = useState<SortKey>(settings.defaultSort);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [compareOpen, setCompareOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  useEffect(() => { setSortKey(settings.defaultSort); }, [settings.defaultSort]);
 
   useEffect(() => {
     let active = true;
@@ -53,13 +59,35 @@ function HistoryPage() {
     return () => { active = false; };
   }, [navigate]);
 
-  const onDelete = async (id: string) => {
-    const prev = rows;
+  const onDelete = (id: string) => {
+    const target = rows?.find((x) => x.id === id);
+    if (!target) return;
     setRows((r) => r?.filter((x) => x.id !== id) ?? null);
     setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
-    const { error } = await supabase.from("patient_records").delete().eq("id", id);
-    if (error) { toast.error("Failed to delete: " + error.message); setRows(prev); }
-    else toast.success("Record deleted");
+    let undone = false;
+    toast.success("Record deleted", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          setRows((r) => {
+            if (!r) return r;
+            const next = [...r, target];
+            next.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            return next;
+          });
+        },
+      },
+      duration: 5000,
+    });
+    setTimeout(async () => {
+      if (undone) return;
+      const { error } = await supabase.from("patient_records").delete().eq("id", id);
+      if (error) {
+        toast.error("Failed to delete: " + error.message);
+        setRows((r) => r ? [...r, target].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : r);
+      }
+    }, 5000);
   };
 
   const onBulkDelete = async () => {
