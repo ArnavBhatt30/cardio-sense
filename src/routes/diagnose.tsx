@@ -25,11 +25,18 @@ function DiagnosePage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate({ to: "/auth" });
-      else setAuthed(true);
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) { navigate({ to: "/auth" }); return; }
+      setAuthed(true);
+      const { data: recs } = await supabase
+        .from("patient_records")
+        .select("patient_name")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (recs) setSuggestions(Array.from(new Set(recs.map((r) => r.patient_name))));
     });
   }, [navigate]);
 
@@ -108,7 +115,7 @@ function DiagnosePage() {
         </p>
       </div>
 
-      <DiagnoseForm onSubmit={onSubmit} loading={loading} />
+      <DiagnoseForm onSubmit={onSubmit} loading={loading} suggestions={suggestions} />
       {result && <RiskReadout r={result} />}
     </div>
   );

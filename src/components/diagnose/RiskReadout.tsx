@@ -1,10 +1,11 @@
 import type { Result } from "@/lib/risk-utils";
 import { RiskGauge } from "./RiskGauge";
+import { Printer } from "lucide-react";
 
 export function RiskReadout({ r }: { r: Result }) {
   return (
     <div className="surface-raised mt-12 overflow-hidden">
-      <div className="grid items-center gap-8 border-b border-border bg-bone2/30 p-10 md:grid-cols-[auto_1fr]">
+      <div className="grid items-center gap-8 border-b border-border bg-bone2/30 p-10 md:grid-cols-[auto_1fr_auto]">
         <RiskGauge risk={r.risk} tier={r.tier} confidence={r.confidence} />
         <div>
           <div className="eyebrow eyebrow-dot mb-3">Cardiovascular risk readout</div>
@@ -18,6 +19,13 @@ export function RiskReadout({ r }: { r: Result }) {
             note{r.notes.length === 1 ? "" : "s"} generated · saved to history.
           </p>
         </div>
+        <button
+          onClick={() => window.print()}
+          className="no-print flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-ink2 transition-all hover:border-primary/40 hover:text-foreground"
+          aria-label="Print readout"
+        >
+          <Printer className="h-3.5 w-3.5" /> Print
+        </button>
       </div>
 
       <div className="grid gap-12 p-10 md:grid-cols-2">
