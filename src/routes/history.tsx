@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash2, FileDown, ArrowUpDown, GitCompare, X } from "lucide-react";
+import { Trash2, FileDown, ArrowUpDown, GitCompare, X, ChevronDown, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import JSZip from "jszip";
 import { buildReport, downloadPdf, type ReportRecord } from "@/lib/pdf-report";
 import { SkeletonRow } from "@/components/ui/skeleton-row";
 import { EcgEmpty } from "@/components/site/EcgEmpty";
+import { useSettings, formatHeight, formatWeight } from "@/lib/settings";
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
@@ -25,16 +26,22 @@ type SortKey = "created_at" | "risk_score" | "patient_name" | "bmi";
 
 function HistoryPage() {
   const navigate = useNavigate();
+  const settings = useSettings();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Record[] | null>(null);
   const [query, setQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<Set<Tier>>(new Set());
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortKey, setSortKey] = useState<SortKey>(settings.defaultSort);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [compareOpen, setCompareOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  useEffect(() => { setSortKey(settings.defaultSort); }, [settings.defaultSort]);
 
   useEffect(() => {
     let active = true;
@@ -52,13 +59,35 @@ function HistoryPage() {
     return () => { active = false; };
   }, [navigate]);
 
-  const onDelete = async (id: string) => {
-    const prev = rows;
+  const onDelete = (id: string) => {
+    const target = rows?.find((x) => x.id === id);
+    if (!target) return;
     setRows((r) => r?.filter((x) => x.id !== id) ?? null);
     setSelected((s) => { const n = new Set(s); n.delete(id); return n; });
-    const { error } = await supabase.from("patient_records").delete().eq("id", id);
-    if (error) { toast.error("Failed to delete: " + error.message); setRows(prev); }
-    else toast.success("Record deleted");
+    let undone = false;
+    toast.success("Record deleted", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          setRows((r) => {
+            if (!r) return r;
+            const next = [...r, target];
+            next.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            return next;
+          });
+        },
+      },
+      duration: 5000,
+    });
+    setTimeout(async () => {
+      if (undone) return;
+      const { error } = await supabase.from("patient_records").delete().eq("id", id);
+      if (error) {
+        toast.error("Failed to delete: " + error.message);
+        setRows((r) => r ? [...r, target].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : r);
+      }
+    }, 5000);
   };
 
   const onBulkDelete = async () => {
@@ -124,6 +153,45 @@ function HistoryPage() {
     if (selected.size === filtered.length) setSelected(new Set());
     else setSelected(new Set(filtered.map((r) => r.id)));
   };
+
+  // Per-patient previous-scan map for delta badges (uses unfiltered chronological history)
+  const deltaMap = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!rows) return m;
+    const byPatient = new Map<string, Record[]>();
+    rows.forEach((r) => {
+      const key = r.patient_name.toLowerCase().trim();
+      const arr = byPatient.get(key) ?? [];
+      arr.push(r);
+      byPatient.set(key, arr);
+    });
+    byPatient.forEach((arr) => {
+      const sorted = [...arr].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      sorted.forEach((r, i) => {
+        if (i > 0) m.set(r.id, r.risk_score - sorted[i - 1].risk_score);
+      });
+    });
+    return m;
+  }, [rows]);
+
+  // Keyboard navigation on rows
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (filtered.length === 0) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((i) => Math.min(filtered.length - 1, i + 1 < 0 ? 0 : i + 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((i) => Math.max(0, i - 1)); }
+      else if (e.key === " " && focusedIdx >= 0) { e.preventDefault(); toggleSel(filtered[focusedIdx].id); }
+      else if (e.key === "Enter" && focusedIdx >= 0) {
+        e.preventDefault();
+        const id = filtered[focusedIdx].id;
+        setExpanded((x) => x === id ? null : id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filtered, focusedIdx]);
 
   if (!authed) return null;
   const compareList = (rows ?? []).filter((r) => selected.has(r.id));
@@ -256,60 +324,85 @@ function HistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => {
+                {filtered.map((r, idx) => {
                   const c = r.risk_tier === "high" ? "primary" : r.risk_tier === "mid" ? "amber" : "sage";
                   const tierLabel = r.risk_tier === "high" ? "High" : r.risk_tier === "mid" ? "Mod" : "Low";
                   const isSel = selected.has(r.id);
+                  const isExp = expanded === r.id;
+                  const isFocused = focusedIdx === idx;
+                  const delta = deltaMap.get(r.id);
                   return (
-                    <tr key={r.id}
-                      className="border-t border-border transition-colors hover:bg-bone2/30"
-                      style={isSel ? { background: "color-mix(in oklab, var(--primary) 5%, transparent)" } : undefined}
-                    >
-                      <td className="px-4 py-4">
-                        <input type="checkbox" checked={isSel} onChange={() => toggleSel(r.id)}
-                          aria-label={`Select ${r.patient_name}`}
-                          className="h-3.5 w-3.5 cursor-pointer accent-primary" />
-                      </td>
-                      <td className="px-5 py-4 font-medium">{r.patient_name}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{r.age}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{Number(r.bmi).toFixed(1)}</td>
-                      <td className="px-5 py-4 font-mono text-xs text-ink2">{r.ap_hi}/{r.ap_lo}</td>
-                      <td className="px-5 py-4">
-                        <span className="display-numeral text-2xl" style={{ color: `var(--${c})` }}>
-                          {r.risk_score}<span className="ml-0.5 text-[10px] align-top">%</span>
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest"
-                          style={{
-                            borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
-                            background: `color-mix(in oklab, var(--${c}) 8%, transparent)`,
-                            color: `var(--${c})`,
-                          }}>
-                          {tierLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[10px] text-ink3">
-                        {new Date(r.created_at).toLocaleString("en-GB", {
-                          day: "2-digit", month: "short", year: "2-digit",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => downloadPdf(r)}
-                            className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
-                            aria-label="Download PDF" title="Download PDF report">
-                            <FileDown className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => onDelete(r.id)}
-                            className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
-                            aria-label="Delete record">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={r.id}
+                        onClick={() => setExpanded(isExp ? null : r.id)}
+                        onMouseEnter={() => setFocusedIdx(idx)}
+                        className="cursor-pointer border-t border-border transition-colors hover:bg-bone2/30"
+                        style={{
+                          ...(isSel ? { background: "color-mix(in oklab, var(--primary) 5%, transparent)" } : {}),
+                          ...(isFocused ? { boxShadow: "inset 2px 0 0 var(--primary)" } : {}),
+                        }}
+                      >
+                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={isSel} onChange={() => toggleSel(r.id)}
+                            aria-label={`Select ${r.patient_name}`}
+                            className="h-3.5 w-3.5 cursor-pointer accent-primary" />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 font-medium">
+                            <ChevronDown className={`h-3 w-3 text-ink3 transition-transform ${isExp ? "rotate-0" : "-rotate-90"}`} />
+                            {r.patient_name}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{r.age}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{Number(r.bmi).toFixed(1)}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-ink2">{r.ap_hi}/{r.ap_lo}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-baseline gap-2">
+                            <span className="display-numeral text-2xl" style={{ color: `var(--${c})` }}>
+                              {r.risk_score}<span className="ml-0.5 text-[10px] align-top">%</span>
+                            </span>
+                            {delta !== undefined && <DeltaBadge delta={delta} />}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest"
+                            style={{
+                              borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
+                              background: `color-mix(in oklab, var(--${c}) 8%, transparent)`,
+                              color: `var(--${c})`,
+                            }}>
+                            {tierLabel}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[10px] text-ink3">
+                          {new Date(r.created_at).toLocaleString("en-GB", {
+                            day: "2-digit", month: "short", year: "2-digit",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => downloadPdf(r)}
+                              className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
+                              aria-label="Download PDF" title="Download PDF report">
+                              <FileDown className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => onDelete(r.id)}
+                              className="rounded p-1.5 text-ink3 transition-all hover:text-primary hover:bg-primary/5"
+                              aria-label="Delete record">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExp && (
+                        <tr key={`${r.id}-exp`} className="border-t border-border bg-bone2/20">
+                          <td colSpan={9} className="px-8 py-6 animate-[fade-in_0.2s_ease-out]">
+                            <ExpandedRow r={r} settings={settings} />
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
                 {filtered.length === 0 && (
@@ -399,5 +492,59 @@ function CmpRow({ label, records, fmt, tint, large }: {
         </td>
       ))}
     </tr>
+  );
+}
+
+function DeltaBadge({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 rounded-full border border-border px-1.5 py-0.5 font-mono text-[9px] text-ink3">
+        <Minus className="h-2.5 w-2.5" /> 0
+      </span>
+    );
+  }
+  const up = delta > 0;
+  const c = up ? "primary" : "sage";
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 font-mono text-[9px]"
+      style={{
+        borderColor: `color-mix(in oklab, var(--${c}) 30%, transparent)`,
+        background: `color-mix(in oklab, var(--${c}) 10%, transparent)`,
+        color: `var(--${c})`,
+      }}
+      title={`${up ? "Up" : "Down"} ${Math.abs(delta)} pts vs. previous scan`}
+    >
+      {up ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+      {up ? "+" : ""}{delta}
+    </span>
+  );
+}
+
+function ExpandedRow({ r, settings }: {
+  r: Record;
+  settings: { weightUnit: "kg" | "lb"; heightUnit: "cm" | "in" };
+}) {
+  const lvl = (n?: number) => n === 3 ? "Well above normal" : n === 2 ? "Above normal" : n === 1 ? "Normal" : "—";
+  const yn = (n?: number) => n === 1 ? "Yes" : n === 0 ? "No" : "—";
+  const items: [string, string][] = [
+    ["Sex", r.gender === 2 ? "Male" : r.gender === 1 ? "Female" : "—"],
+    ["Height", r.height ? formatHeight(Number(r.height), settings.heightUnit) : "—"],
+    ["Weight", r.weight ? formatWeight(Number(r.weight), settings.weightUnit) : "—"],
+    ["Cholesterol", lvl(r.cholesterol)],
+    ["Glucose", lvl(r.gluc)],
+    ["Smoker", yn(r.smoke)],
+    ["Alcohol", yn(r.alco)],
+    ["Active", yn(r.active)],
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-x-8 gap-y-2 md:grid-cols-4">
+      {items.map(([k, v]) => (
+        <div key={k} className="border-l-2 border-border pl-3">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-ink3">{k}</div>
+          <div className="mt-0.5 text-sm">{v}</div>
+        </div>
+      ))}
+    </div>
   );
 }

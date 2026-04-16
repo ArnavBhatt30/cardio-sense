@@ -4,6 +4,8 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
 import { PageTransition } from "@/components/site/PageTransition";
 import { CommandPalette } from "@/components/site/CommandPalette";
+import { OnboardingTour } from "@/components/site/OnboardingTour";
+import { SettingsProvider } from "@/lib/settings";
 
 import appCss from "../styles.css?url";
 
@@ -81,7 +83,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <>
+    <SettingsProvider>
       <SiteHeader />
       <main className="min-h-[calc(100vh-4rem)]">
         <PageTransition>
@@ -90,7 +92,8 @@ function RootComponent() {
       </main>
       <SiteFooter />
       <CommandPalette />
+      <OnboardingTour />
       <Toaster />
-    </>
+    </SettingsProvider>
   );
 }

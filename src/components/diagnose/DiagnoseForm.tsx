@@ -7,8 +7,8 @@ import {
 } from "@/components/ui/select";
 import { calcBmi } from "@/lib/risk-utils";
 import { toast } from "sonner";
-
-const DRAFT_KEY = "cardiosense:diagnose-draft";
+import { PRESETS } from "@/lib/presets";
+import { Sparkles, ChevronDown } from "lucide-react";
 
 export type FormState = {
   patient_name: string;
@@ -25,15 +25,19 @@ export const emptyForm: FormState = {
 };
 
 const YN = [{ v: "1", l: "Yes" }, { v: "0", l: "No" }];
+const DRAFT_KEY = "cardiosense:diagnose-draft";
 
 export function DiagnoseForm({
-  onSubmit, loading,
+  onSubmit, loading, suggestions = [],
 }: {
   onSubmit: (f: FormState) => void;
   loading: boolean;
+  suggestions?: string[];
 }) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [restored, setRestored] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -71,21 +75,91 @@ export function DiagnoseForm({
     toast.success("Draft cleared");
   };
 
+  const applyPreset = (id: string) => {
+    const p = PRESETS.find((x) => x.id === id);
+    if (!p) return;
+    setForm({ patient_name: form.patient_name || `Sample · ${p.label}`, ...p.data });
+    setPresetsOpen(false);
+    toast.success(`Loaded ${p.label} preset`);
+  };
+
+  const filteredSuggestions = form.patient_name
+    ? suggestions.filter(
+        (n) => n.toLowerCase().includes(form.patient_name.toLowerCase()) && n !== form.patient_name,
+      ).slice(0, 5)
+    : [];
+
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}
       className="surface-raised overflow-hidden"
     >
-      <div className="border-b border-border bg-bone2/40 px-8 py-6">
+      {/* Preset bar */}
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-bone2/30 px-8 py-3">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-ink3">Quick start</span>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPresetsOpen((o) => !o)}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-ink2 transition-all hover:text-foreground hover:border-primary/40"
+          >
+            <Sparkles className="h-3 w-3" /> Sample patient
+            <ChevronDown className={`h-3 w-3 transition-transform ${presetsOpen ? "rotate-180" : ""}`} />
+          </button>
+          {presetsOpen && (
+            <div className="absolute right-0 top-full z-10 mt-1 w-64 overflow-hidden rounded-md border border-border bg-card shadow-xl animate-[scale-in_0.15s_ease-out]">
+              {PRESETS.map((p) => {
+                const c = p.tier === "high" ? "primary" : p.tier === "mid" ? "amber" : "sage";
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => applyPreset(p.id)}
+                    className="flex w-full items-center justify-between gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-bone2/50"
+                  >
+                    <div>
+                      <div className="text-sm font-medium">{p.label}</div>
+                      <div className="font-mono text-[10px] text-ink3">{p.caption}</div>
+                    </div>
+                    <span className="h-2 w-2 rounded-full" style={{ background: `var(--${c})` }} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative border-b border-border bg-bone2/40 px-8 py-6">
         <Label htmlFor="patient_name" className="eyebrow">Patient identifier</Label>
         <Input
           id="patient_name"
+          autoComplete="off"
           className="mt-3 border-0 border-b border-border bg-transparent px-0 font-serif text-2xl shadow-none focus-visible:border-primary focus-visible:ring-0"
           value={form.patient_name}
-          onChange={(e) => set("patient_name", e.target.value)}
+          onChange={(e) => { set("patient_name", e.target.value); setShowSuggest(true); }}
+          onFocus={() => setShowSuggest(true)}
+          onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
           placeholder="John Doe · MRN-1234"
           required
         />
+        {showSuggest && filteredSuggestions.length > 0 && (
+          <div className="absolute left-8 right-8 top-full z-10 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-xl animate-[fade-in_0.15s_ease-out]">
+            <div className="border-b border-border bg-bone2/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-ink3">
+              Existing patients
+            </div>
+            {filteredSuggestions.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); set("patient_name", n); setShowSuggest(false); }}
+                className="block w-full border-b border-border px-3 py-2 text-left text-sm transition-colors last:border-0 hover:bg-bone2/50"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <FieldGroup index="01" title="Demographics" caption="Patient baseline">

@@ -36,14 +36,17 @@ export function SiteHeader() {
           </Link>
           {email && (
             <>
-              <Link to="/dashboard" className={linkCls} activeProps={{ className: activeCls }}>
+              <Link to="/dashboard" data-tour="nav-dashboard" className={linkCls} activeProps={{ className: activeCls }}>
                 Dashboard
               </Link>
-              <Link to="/diagnose" className={linkCls} activeProps={{ className: activeCls }}>
+              <Link to="/diagnose" data-tour="nav-diagnose" className={linkCls} activeProps={{ className: activeCls }}>
                 Diagnose
               </Link>
-              <Link to="/history" className={linkCls} activeProps={{ className: activeCls }}>
+              <Link to="/history" data-tour="nav-history" className={linkCls} activeProps={{ className: activeCls }}>
                 History
+              </Link>
+              <Link to="/settings" className={linkCls} activeProps={{ className: activeCls }}>
+                Settings
               </Link>
             </>
           )}
