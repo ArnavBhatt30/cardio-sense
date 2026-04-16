@@ -84,7 +84,15 @@ export function DiagnoseForm({
       </FieldGroup>
 
       <div className="flex flex-col items-start justify-between gap-4 border-t border-border bg-bone2/30 px-8 py-6 sm:flex-row sm:items-center">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-ink3">⚕ Screening only — not a clinical diagnosis</p>
+        <div className="flex flex-col gap-1">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink3">⚕ Screening only — not a clinical diagnosis</p>
+          {restored && (
+            <button type="button" onClick={clearDraft}
+              className="text-left font-mono text-[10px] uppercase tracking-widest text-primary hover:underline animate-[fade-in_0.3s_ease-out]">
+              Draft restored · clear
+            </button>
+          )}
+        </div>
         <Button type="submit" size="lg" disabled={loading}>
           {loading ? "Analysing…" : "Run AI diagnosis →"}
         </Button>
