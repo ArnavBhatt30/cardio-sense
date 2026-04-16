@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 
 export function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {email ? (
             <>
               <span className="hidden font-mono text-[11px] text-ink3 md:inline">{email}</span>
