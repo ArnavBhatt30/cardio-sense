@@ -56,8 +56,8 @@ export function MobileNav({
 
         {/* panel */}
         <div
-          className={`relative flex h-full flex-col transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            open ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
+          className={`relative flex h-full flex-col bg-background transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            open ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0 pointer-events-none"
           }`}
         >
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
