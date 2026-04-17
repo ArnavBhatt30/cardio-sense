@@ -16,13 +16,18 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
+    if (!open) return;
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -43,21 +48,15 @@ export function MobileNav({
         <Menu className="h-4 w-4" />
       </button>
 
-      {/* Overlay */}
       <div
-        className={`fixed inset-0 z-[60] md:hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-[120] overflow-y-auto overscroll-contain bg-background md:hidden ${
+          open ? "pointer-events-auto visible" : "pointer-events-none invisible"
+        }`}
         aria-hidden={!open}
       >
-        {/* backdrop */}
         <div
-          className={`absolute inset-0 bg-background transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
-          onClick={() => setOpen(false)}
-        />
-
-        {/* panel */}
-        <div
-          className={`relative flex h-full flex-col bg-background transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            open ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0 pointer-events-none"
+          className={`flex min-h-screen h-dvh flex-col bg-background transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            open ? "translate-y-0" : "-translate-y-3"
           }`}
         >
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
@@ -93,10 +92,10 @@ export function MobileNav({
                 }}
                 activeProps={{ className: "text-primary" }}
               >
-                <span className="font-mono text-[10px] uppercase tracking-widest text-ink3 w-6">
+                <span className="w-6 font-mono text-[10px] uppercase tracking-widest text-ink3">
                   0{idx + 1}
                 </span>
-                <span className="font-serif text-3xl tracking-tight group-hover:translate-x-1 transition-transform">
+                <span className="font-serif text-3xl tracking-tight transition-transform group-hover:translate-x-1">
                   {item.label}
                 </span>
               </Link>
@@ -105,7 +104,7 @@ export function MobileNav({
 
           <div className="border-t border-border px-8 py-6">
             {email ? (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <span className="truncate font-mono text-[11px] text-ink3">{email}</span>
                 <button
                   type="button"
