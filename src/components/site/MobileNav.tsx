@@ -17,16 +17,13 @@ export function MobileNav({
 
   useEffect(() => {
     if (!open) return;
-
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
-
     return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
     };
   }, [open]);
 
@@ -50,12 +47,12 @@ export function MobileNav({
 
       {open && (
         <div
-          className="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-background md:hidden"
+          className="fixed inset-0 z-[200] flex flex-col overflow-y-auto overscroll-contain bg-background md:hidden"
           role="dialog"
           aria-modal="true"
+          style={{ minHeight: "100dvh" }}
         >
-          <div className="flex min-h-dvh flex-col bg-background">
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between border-b border-border bg-background px-6 py-4">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
               <span className="grid h-7 w-7 place-items-center rounded-full border border-primary/30 bg-primary/5 text-primary">
                 <Heart className="h-3.5 w-3.5" fill="currentColor" />
@@ -72,20 +69,13 @@ export function MobileNav({
             </button>
           </div>
 
-          <nav className="flex flex-1 flex-col justify-center gap-2 px-8">
+          <nav className="flex flex-1 flex-col justify-center gap-2 bg-background px-8">
             {items.map((item, idx) => (
               <Link
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="group flex items-baseline gap-4 border-b border-border/60 py-4 transition-transform"
-                style={{
-                  transitionDelay: open ? `${80 + idx * 50}ms` : "0ms",
-                  transform: open ? "translateY(0)" : "translateY(12px)",
-                  opacity: open ? 1 : 0,
-                  transitionProperty: "transform, opacity",
-                  transitionDuration: "500ms",
-                }}
+                className="group flex items-baseline gap-4 border-b border-border/60 py-4"
                 activeProps={{ className: "text-primary" }}
               >
                 <span className="w-6 font-mono text-[10px] uppercase tracking-widest text-ink3">
@@ -98,7 +88,7 @@ export function MobileNav({
             ))}
           </nav>
 
-          <div className="border-t border-border px-8 py-6">
+          <div className="border-t border-border bg-background px-8 py-6">
             {email ? (
               <div className="flex items-center justify-between gap-4">
                 <span className="truncate font-mono text-[11px] text-ink3">{email}</span>
