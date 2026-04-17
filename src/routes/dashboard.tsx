@@ -123,11 +123,31 @@ function DashboardPage() {
     [rows],
   );
 
-  // map avg risk to ECG bpm: low risk -> calm 62bpm, high risk -> elevated 96bpm
-  const bpm = useMemo(() => {
+  // baseline bpm from cohort avg risk; modulated live below
+  const baseBpm = useMemo(() => {
     if (!stats) return 68;
     return Math.round(60 + (stats.avg / 100) * 40);
   }, [stats]);
+
+  // live ticker — 1Hz heartbeat for the HUD (seconds since mount, last-update)
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // bpm wanders ±3 around baseline every 4s — physiological variability
+  const [bpm, setBpm] = useState(baseBpm);
+  useEffect(() => {
+    setBpm(baseBpm);
+    const id = window.setInterval(() => {
+      setBpm(baseBpm + Math.round((Math.random() - 0.5) * 6));
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [baseBpm]);
+
+  const lastScanAt = rows && rows[0] ? new Date(rows[0].created_at).getTime() : null;
+  const sinceLast = lastScanAt ? Math.max(0, Math.floor((now - lastScanAt) / 1000)) : null;
 
   if (!authed) return null;
 
