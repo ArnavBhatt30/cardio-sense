@@ -236,6 +236,32 @@ function DashboardPage() {
               </div>
             </div>
 
+            {/* live status strip */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bone2/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-ink3">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                </span>
+                <span className="text-foreground">LIVE</span>
+                <span>· streaming from cohort</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>
+                  BPM <span className="display-numeral text-foreground">{bpm}</span>
+                </span>
+                <span>
+                  Last scan{" "}
+                  <span className="text-foreground">
+                    {sinceLast === null ? "—" : formatSince(sinceLast)}
+                  </span>
+                </span>
+                <span className="hidden sm:inline">
+                  {new Date(now).toLocaleTimeString("en-GB", { hour12: false })}
+                </span>
+              </div>
+            </div>
+
             {/* Live ECG */}
             <EcgPulse bpm={bpm} height={140} label="Live sinus rhythm · cohort avg" />
 
