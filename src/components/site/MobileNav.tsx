@@ -124,7 +124,7 @@ export function MobileNav({
             )}
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
