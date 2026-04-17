@@ -123,11 +123,31 @@ function DashboardPage() {
     [rows],
   );
 
-  // map avg risk to ECG bpm: low risk -> calm 62bpm, high risk -> elevated 96bpm
-  const bpm = useMemo(() => {
+  // baseline bpm from cohort avg risk; modulated live below
+  const baseBpm = useMemo(() => {
     if (!stats) return 68;
     return Math.round(60 + (stats.avg / 100) * 40);
   }, [stats]);
+
+  // live ticker — 1Hz heartbeat for the HUD (seconds since mount, last-update)
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // bpm wanders ±3 around baseline every 4s — physiological variability
+  const [bpm, setBpm] = useState(baseBpm);
+  useEffect(() => {
+    setBpm(baseBpm);
+    const id = window.setInterval(() => {
+      setBpm(baseBpm + Math.round((Math.random() - 0.5) * 6));
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [baseBpm]);
+
+  const lastScanAt = rows && rows[0] ? new Date(rows[0].created_at).getTime() : null;
+  const sinceLast = lastScanAt ? Math.max(0, Math.floor((now - lastScanAt) / 1000)) : null;
 
   if (!authed) return null;
 
@@ -213,6 +233,32 @@ function DashboardPage() {
                     ) : null}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* live status strip */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-bone2/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-ink3">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                </span>
+                <span className="text-foreground">LIVE</span>
+                <span>· streaming from cohort</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>
+                  BPM <span className="display-numeral text-foreground">{bpm}</span>
+                </span>
+                <span>
+                  Last scan{" "}
+                  <span className="text-foreground">
+                    {sinceLast === null ? "—" : formatSince(sinceLast)}
+                  </span>
+                </span>
+                <span className="hidden sm:inline">
+                  {new Date(now).toLocaleTimeString("en-GB", { hour12: false })}
+                </span>
               </div>
             </div>
 
@@ -332,6 +378,13 @@ function Legend({ color, label }: { color: string; label: string }) {
 function greeting() {
   const h = new Date().getHours();
   return h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+function formatSince(s: number) {
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 function Metric({ n, label, tint }: { n: string; label: string; tint?: string }) {
