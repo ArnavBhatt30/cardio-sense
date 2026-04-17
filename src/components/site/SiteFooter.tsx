@@ -30,7 +30,7 @@ export function SiteFooter() {
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-6 py-5 font-mono text-[10px] uppercase tracking-widest text-ink3 md:flex-row md:items-center">
           <span>© {new Date().getFullYear()} CardioSense — for screening use only.</span>
-          <span>XGBoost · Flask · Lovable Cloud</span>
+          <span>XGBoost · Flask · Postgres</span>
         </div>
       </div>
     </footer>

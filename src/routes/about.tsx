@@ -77,7 +77,7 @@ function AboutPage() {
           ["Training corpus", "≈ 70,000 patient records — Cardiovascular Disease Dataset + Framingham-derived features"],
           ["Output", "Probability ∈ [0, 1] · binary label · model confidence"],
           ["Inference layer", "Flask service on Railway, called via TanStack server function"],
-          ["Persistence", "Lovable Cloud Postgres with row-level security per user"],
+          ["Persistence", "Managed Postgres with row-level security per user"],
         ]}
       />
 

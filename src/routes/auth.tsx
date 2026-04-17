@@ -102,7 +102,7 @@ function AuthPage() {
         </div>
 
         <div className="font-mono text-[10px] uppercase tracking-widest text-ink3">
-          XGBoost · Flask · Lovable Cloud
+          XGBoost · Flask · Postgres
         </div>
       </aside>
 
