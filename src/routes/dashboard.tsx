@@ -380,6 +380,13 @@ function greeting() {
   return h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
+function formatSince(s: number) {
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
 function Metric({ n, label, tint }: { n: string; label: string; tint?: string }) {
   return (
     <div className="bg-card px-6 py-7">
