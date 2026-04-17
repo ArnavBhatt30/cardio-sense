@@ -48,17 +48,13 @@ export function MobileNav({
         <Menu className="h-4 w-4" />
       </button>
 
-      <div
-        className={`fixed inset-0 z-[120] overflow-y-auto overscroll-contain bg-background md:hidden ${
-          open ? "pointer-events-auto visible" : "pointer-events-none invisible"
-        }`}
-        aria-hidden={!open}
-      >
+      {open && (
         <div
-          className={`flex min-h-screen h-dvh flex-col bg-background transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            open ? "translate-y-0" : "-translate-y-3"
-          }`}
+          className="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-background md:hidden"
+          role="dialog"
+          aria-modal="true"
         >
+          <div className="flex min-h-dvh flex-col bg-background">
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <Link to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
               <span className="grid h-7 w-7 place-items-center rounded-full border border-primary/30 bg-primary/5 text-primary">
