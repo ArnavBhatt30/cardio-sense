@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
+import { MobileNav } from "@/components/site/MobileNav";
 
 export function SiteHeader() {
   const [email, setEmail] = useState<string | null>(null);
@@ -19,6 +20,25 @@ export function SiteHeader() {
 
   const linkCls = "text-[13px] tracking-wide text-ink2 hover:text-foreground transition-colors";
   const activeCls = "text-foreground";
+
+  const navItems = email
+    ? [
+        { to: "/", label: "Home" },
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/diagnose", label: "Diagnose" },
+        { to: "/history", label: "History" },
+        { to: "/settings", label: "Settings" },
+        { to: "/about", label: "About" },
+      ]
+    : [
+        { to: "/", label: "Home" },
+        { to: "/about", label: "About" },
+      ];
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
@@ -57,25 +77,21 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          {email ? (
-            <>
-              <span className="hidden font-mono text-[11px] text-ink3 md:inline">{email}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate({ to: "/" });
-                }}
-              >
-                Sign out
+          <div className="hidden md:flex md:items-center md:gap-3">
+            {email ? (
+              <>
+                <span className="hidden font-mono text-[11px] text-ink3 lg:inline">{email}</span>
+                <Button variant="outline" size="sm" onClick={signOut}>
+                  Sign out
+                </Button>
+              </>
+            ) : (
+              <Button asChild size="sm">
+                <Link to="/auth">Sign in</Link>
               </Button>
-            </>
-          ) : (
-            <Button asChild size="sm">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          )}
+            )}
+          </div>
+          <MobileNav items={navItems} email={email} onSignOut={signOut} />
         </div>
       </div>
     </header>

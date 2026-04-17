@@ -3,16 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowRight } from "lucide-react";
-import { Sparkline } from "@/components/dashboard/Sparkline";
+import { ArrowRight, Activity, TrendingDown, TrendingUp } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/skeleton-row";
+import { EcgPulse } from "@/components/dashboard/EcgPulse";
+import { RiskTrendChart, type TrendPoint } from "@/components/dashboard/RiskTrendChart";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
   head: () => ({
     meta: [
       { title: "Dashboard — CardioSense" },
-      { name: "description", content: "Your cardiovascular risk overview." },
+      { name: "description", content: "Live cardiovascular risk monitoring." },
     ],
   }),
 });
@@ -24,6 +25,7 @@ type Row = {
   risk_tier: "low" | "mid" | "high";
   bmi: number;
   ap_hi: number;
+  ap_lo: number;
   created_at: string;
 };
 
@@ -32,23 +34,64 @@ function DashboardPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [pulseFlash, setPulseFlash] = useState(false);
 
+  // bootstrap auth + initial fetch
   useEffect(() => {
     let active = true;
     supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { navigate({ to: "/auth" }); return; }
+      if (!data.session) {
+        navigate({ to: "/auth" });
+        return;
+      }
       if (!active) return;
       setAuthed(true);
       setEmail(data.session.user.email ?? null);
+      setUserId(data.session.user.id);
       const { data: recs, error } = await supabase
         .from("patient_records")
-        .select("id,patient_name,risk_score,risk_tier,bmi,ap_hi,created_at")
+        .select("id,patient_name,risk_score,risk_tier,bmi,ap_hi,ap_lo,created_at")
         .order("created_at", { ascending: false });
-      if (error) { toast.error(error.message); setRows([]); }
-      else setRows(recs as Row[]);
+      if (error) {
+        toast.error(error.message);
+        setRows([]);
+      } else setRows(recs as Row[]);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [navigate]);
+
+  // realtime subscription
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`patient_records:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "patient_records", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const r = payload.new as Row;
+          setRows((prev) => (prev ? [r, ...prev] : [r]));
+          setPulseFlash(true);
+          setTimeout(() => setPulseFlash(false), 1200);
+          toast.success(`New scan: ${r.patient_name} · ${r.risk_score}%`);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "patient_records", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const old = payload.old as { id: string };
+          setRows((prev) => prev?.filter((r) => r.id !== old.id) ?? null);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const stats = useMemo(() => {
     if (!rows || rows.length === 0) return null;
@@ -57,59 +100,153 @@ function DashboardPage() {
     const high = rows.filter((r) => r.risk_tier === "high").length;
     const mid = rows.filter((r) => r.risk_tier === "mid").length;
     const low = rows.filter((r) => r.risk_tier === "low").length;
-    const avgBmi = (rows.reduce((a, r) => a + Number(r.bmi), 0) / total);
-    return { total, avg, high, mid, low, avgBmi };
+    const avgBmi = rows.reduce((a, r) => a + Number(r.bmi), 0) / total;
+    const avgSys = Math.round(rows.reduce((a, r) => a + r.ap_hi, 0) / total);
+
+    // trend delta: last 5 vs prior 5
+    const recent = rows.slice(0, 5);
+    const prior = rows.slice(5, 10);
+    const recentAvg = recent.length ? recent.reduce((a, r) => a + r.risk_score, 0) / recent.length : 0;
+    const priorAvg = prior.length ? prior.reduce((a, r) => a + r.risk_score, 0) / prior.length : recentAvg;
+    const delta = Math.round(recentAvg - priorAvg);
+
+    return { total, avg, high, mid, low, avgBmi, avgSys, delta };
   }, [rows]);
+
+  const trendData: TrendPoint[] = useMemo(
+    () =>
+      (rows ?? []).map((r) => ({
+        t: new Date(r.created_at).getTime(),
+        v: r.risk_score,
+        tier: r.risk_tier,
+      })),
+    [rows],
+  );
+
+  // map avg risk to ECG bpm: low risk -> calm 62bpm, high risk -> elevated 96bpm
+  const bpm = useMemo(() => {
+    if (!stats) return 68;
+    return Math.round(60 + (stats.avg / 100) * 40);
+  }, [stats]);
 
   if (!authed) return null;
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-20">
-      <div className="mb-14 grid items-end gap-6 md:grid-cols-12">
+    <div className="mx-auto max-w-7xl px-6 py-12 md:py-20">
+      {/* header */}
+      <div className="mb-10 grid items-end gap-6 md:mb-14 md:grid-cols-12">
         <div className="md:col-span-7">
-          <div className="eyebrow eyebrow-dot mb-3">Overview</div>
+          <div className="eyebrow eyebrow-dot mb-3">Live overview</div>
           <h1>
             {greeting()}, <em>{email?.split("@")[0] ?? "clinician"}</em>
           </h1>
         </div>
         <div className="md:col-span-5 md:text-right">
           <Button asChild>
-            <Link to="/diagnose">New diagnosis <ArrowRight className="ml-1.5 h-4 w-4" /></Link>
+            <Link to="/diagnose">
+              New diagnosis <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>
 
       {rows === null ? (
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-card p-7"><SkeletonBlock className="h-10 w-24" /><SkeletonBlock className="mt-3 h-3 w-32" /></div>
-          ))}
+        <div className="space-y-6">
+          <SkeletonBlock className="h-[200px] w-full rounded-xl" />
+          <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-card p-7">
+                <SkeletonBlock className="h-10 w-24" />
+                <SkeletonBlock className="mt-3 h-3 w-32" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : rows.length === 0 ? (
         <EmptyState />
       ) : (
         <>
-          {/* stat band */}
-          <section className="mb-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
-            <Metric n={String(stats!.total)} label="Total scans" />
-            <Metric n={`${stats!.avg}%`} label="Average risk" tint={
-              stats!.avg > 65 ? "primary" : stats!.avg > 35 ? "amber" : "sage"
-            } />
-            <Metric n={stats!.avgBmi.toFixed(1)} label="Average BMI" />
-            <Metric n={`${stats!.high}`} label="High-risk patients" tint={stats!.high > 0 ? "primary" : undefined} />
-          </section>
-
-          {/* trend sparkline */}
-          <section className="surface-raised mb-12 grid gap-6 px-8 py-6 md:grid-cols-[1fr_auto] md:items-center">
-            <div>
-              <div className="eyebrow mb-2">Risk trend · last {Math.min(rows.length, 10)} scans</div>
-              <div className="text-sm text-ink2">
-                {rows.length >= 2
-                  ? `Trending ${rows[0].risk_score > rows[Math.min(rows.length, 10) - 1].risk_score ? "upward" : "downward"} from oldest to most recent`
-                  : "Run more diagnoses to surface a trend."}
+          {/* HERO: live ECG + risk trend */}
+          <section
+            className={`mb-10 rounded-2xl border border-border bg-card p-5 md:p-7 transition-shadow duration-700 ${
+              pulseFlash ? "shadow-[0_0_0_2px_var(--primary)]" : ""
+            }`}
+          >
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="eyebrow eyebrow-dot mb-1.5">
+                  <Activity className="mr-1 inline h-3 w-3" />
+                  Realtime monitor
+                </div>
+                <h2 className="font-serif text-2xl tracking-tight md:text-3xl">
+                  Cohort vitals · <em className="text-primary">live</em>
+                </h2>
+              </div>
+              <div className="flex items-center gap-5 font-mono text-[10px] uppercase tracking-widest text-ink3">
+                <div>
+                  <div>Avg risk</div>
+                  <div className="display-numeral text-2xl text-foreground">{stats!.avg}%</div>
+                </div>
+                <div>
+                  <div>Avg SYS</div>
+                  <div className="display-numeral text-2xl text-foreground">{stats!.avgSys}</div>
+                </div>
+                <div>
+                  <div>Delta</div>
+                  <div
+                    className="display-numeral flex items-center gap-1 text-2xl"
+                    style={{
+                      color:
+                        stats!.delta > 2
+                          ? "var(--primary)"
+                          : stats!.delta < -2
+                            ? "var(--sage)"
+                            : "var(--foreground)",
+                    }}
+                  >
+                    {stats!.delta > 0 ? "+" : ""}
+                    {stats!.delta}
+                    {stats!.delta > 2 ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : stats!.delta < -2 ? (
+                      <TrendingDown className="h-4 w-4" />
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
-            <Sparkline values={[...rows.slice(0, 10)].reverse().map((r) => r.risk_score)} width={260} height={56} />
+
+            {/* Live ECG */}
+            <EcgPulse bpm={bpm} height={140} label="Live sinus rhythm · cohort avg" />
+
+            {/* Trend chart */}
+            <div className="mt-6">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="eyebrow">Risk score timeline · all scans</div>
+                <div className="hidden items-center gap-3 font-mono text-[9px] uppercase tracking-widest text-ink3 sm:flex">
+                  <Legend color="var(--sage)" label="Low" />
+                  <Legend color="var(--amber)" label="Moderate" />
+                  <Legend color="var(--primary)" label="High" />
+                </div>
+              </div>
+              <RiskTrendChart data={trendData} height={240} />
+            </div>
+          </section>
+
+          {/* stat band */}
+          <section className="mb-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-4">
+            <Metric n={String(stats!.total)} label="Total scans" />
+            <Metric
+              n={`${stats!.avg}%`}
+              label="Average risk"
+              tint={stats!.avg > 65 ? "primary" : stats!.avg > 35 ? "amber" : "sage"}
+            />
+            <Metric n={stats!.avgBmi.toFixed(1)} label="Average BMI" />
+            <Metric
+              n={`${stats!.high}`}
+              label="High-risk patients"
+              tint={stats!.high > 0 ? "primary" : undefined}
+            />
           </section>
 
           {/* distribution + recent */}
@@ -124,12 +261,17 @@ function DashboardPage() {
                     ["Moderate", stats!.mid, "amber"],
                     ["High", stats!.high, "primary"],
                   ].map(([label, count, c]) => (
-                    <div key={String(label)} className="flex items-center justify-between border-b border-border pb-2 last:border-0">
+                    <div
+                      key={String(label)}
+                      className="flex items-center justify-between border-b border-border pb-2 last:border-0"
+                    >
                       <span className="flex items-center gap-2 text-sm text-ink2">
                         <span className="h-2 w-2 rounded-full" style={{ background: `var(--${c as string})` }} />
                         {label}
                       </span>
-                      <span className="font-mono text-xs">{String(count)} · {Math.round((Number(count) / stats!.total) * 100)}%</span>
+                      <span className="font-mono text-xs">
+                        {String(count)} · {Math.round((Number(count) / stats!.total) * 100)}%
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -153,12 +295,17 @@ function DashboardPage() {
                           <div className="truncate font-medium">{r.patient_name}</div>
                           <div className="font-mono text-[10px] uppercase tracking-widest text-ink3">
                             {new Date(r.created_at).toLocaleString("en-GB", {
-                              day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-                            })} · BMI {Number(r.bmi).toFixed(1)} · SYS {r.ap_hi}
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}{" "}
+                            · BMI {Number(r.bmi).toFixed(1)} · SYS {r.ap_hi}
                           </div>
                         </div>
                         <div className="display-numeral text-3xl" style={{ color: `var(--${c})` }}>
-                          {r.risk_score}<span className="text-xs align-top">%</span>
+                          {r.risk_score}
+                          <span className="align-top text-xs">%</span>
                         </div>
                       </li>
                     );
@@ -173,6 +320,15 @@ function DashboardPage() {
   );
 }
 
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -181,7 +337,9 @@ function greeting() {
 function Metric({ n, label, tint }: { n: string; label: string; tint?: string }) {
   return (
     <div className="bg-card px-6 py-7">
-      <div className="display-numeral text-4xl" style={tint ? { color: `var(--${tint})` } : undefined}>{n}</div>
+      <div className="display-numeral text-4xl" style={tint ? { color: `var(--${tint})` } : undefined}>
+        {n}
+      </div>
       <div className="mt-2 font-mono text-[10px] uppercase tracking-widest text-ink3">{label}</div>
     </div>
   );
@@ -207,8 +365,13 @@ function Donut({ high, mid, low }: { high: number; mid: number; low: number }) {
           acc += len;
           return (
             <circle
-              key={i} cx="80" cy="80" r={r}
-              fill="none" stroke={s.color} strokeWidth="14"
+              key={i}
+              cx="80"
+              cy="80"
+              r={r}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="14"
               strokeDasharray={`${len} ${c - len}`}
               strokeDashoffset={offset}
             />
@@ -226,11 +389,15 @@ function Donut({ high, mid, low }: { high: number; mid: number; low: number }) {
 function EmptyState() {
   return (
     <div className="surface-raised flex flex-col items-center px-8 py-20 text-center">
-      <div className="display-numeral mb-3 text-7xl text-ink4">—</div>
-      <h2 className="mb-3">No data <em>yet</em></h2>
+      <div className="mb-6 w-full max-w-md">
+        <EcgPulse bpm={62} height={120} label="Awaiting first scan" />
+      </div>
+      <h2 className="mb-3">
+        No data <em>yet</em>
+      </h2>
       <p className="mb-8 max-w-md text-ink2">
-        Run your first patient diagnostic to populate the dashboard with risk scores,
-        tier distribution, and recent activity.
+        Run your first patient diagnostic to populate the dashboard with live risk scores, tier distribution, and a
+        real-time trend chart.
       </p>
       <Button asChild size="lg">
         <Link to="/diagnose">Run first diagnosis →</Link>
