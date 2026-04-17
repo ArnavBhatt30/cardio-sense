@@ -262,8 +262,8 @@ function DashboardPage() {
               </div>
             </div>
 
-            {/* Live ECG */}
-            <EcgPulse bpm={bpm} height={140} label="Live sinus rhythm · cohort avg" />
+            {/* Activity heatmap — daily scan volume × avg risk tier */}
+            <ActivityHeatmap scans={rows!.map((r) => ({ created_at: r.created_at, risk_score: r.risk_score }))} weeks={18} />
 
             {/* Trend chart */}
             <div className="mt-6">
