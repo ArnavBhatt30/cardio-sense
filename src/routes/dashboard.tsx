@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowRight, Activity, TrendingDown, TrendingUp } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/skeleton-row";
-import { EcgPulse } from "@/components/dashboard/EcgPulse";
+import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { RiskTrendChart, type TrendPoint } from "@/components/dashboard/RiskTrendChart";
 
 export const Route = createFileRoute("/dashboard")({
