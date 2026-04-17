@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowRight, Activity, TrendingDown, TrendingUp } from "lucide-react";
 import { SkeletonBlock } from "@/components/ui/skeleton-row";
-import { EcgPulse } from "@/components/dashboard/EcgPulse";
+import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { RiskTrendChart, type TrendPoint } from "@/components/dashboard/RiskTrendChart";
 
 export const Route = createFileRoute("/dashboard")({
@@ -262,8 +262,8 @@ function DashboardPage() {
               </div>
             </div>
 
-            {/* Live ECG */}
-            <EcgPulse bpm={bpm} height={140} label="Live sinus rhythm · cohort avg" />
+            {/* Activity heatmap — daily scan volume × avg risk tier */}
+            <ActivityHeatmap scans={rows!.map((r) => ({ created_at: r.created_at, risk_score: r.risk_score }))} weeks={18} />
 
             {/* Trend chart */}
             <div className="mt-6">
@@ -443,7 +443,7 @@ function EmptyState() {
   return (
     <div className="surface-raised flex flex-col items-center px-8 py-20 text-center">
       <div className="mb-6 w-full max-w-md">
-        <EcgPulse bpm={62} height={120} label="Awaiting first scan" />
+        <ActivityHeatmap scans={[]} weeks={12} />
       </div>
       <h2 className="mb-3">
         No data <em>yet</em>
