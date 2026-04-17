@@ -443,7 +443,7 @@ function EmptyState() {
   return (
     <div className="surface-raised flex flex-col items-center px-8 py-20 text-center">
       <div className="mb-6 w-full max-w-md">
-        <EcgPulse bpm={62} height={120} label="Awaiting first scan" />
+        <ActivityHeatmap scans={[]} weeks={12} />
       </div>
       <h2 className="mb-3">
         No data <em>yet</em>
