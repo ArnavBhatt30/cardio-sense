@@ -47,6 +47,11 @@ export const Route = createRootRoute({
         content: "Clinical-grade heart disease screening tool powered by machine learning.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "CardioSense — AI Cardiovascular Risk Assessment" },
+      { name: "description", content: "Real-time clinical data hub for patient diagnosis, history tracking, and live health monitoring." },
+      { property: "og:description", content: "Real-time clinical data hub for patient diagnosis, history tracking, and live health monitoring." },
+      { name: "twitter:description", content: "Real-time clinical data hub for patient diagnosis, history tracking, and live health monitoring." },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
